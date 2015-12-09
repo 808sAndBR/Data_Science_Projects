@@ -1,0 +1,25 @@
+---
+title: "Tweet Exploration"
+author: "Scott Brenstuhl"
+date: "December 8, 2015"
+output: html_document
+---
+
+```{r libraries, alert=FALSE, message = FALSE}
+library(dplyr)
+library(lubridate)
+```
+
+```{r}
+# Read in tweets produced by twitter_scraper.py
+tweets <- read.csv('canidate_tweets.csv')
+
+tweets$datetime <- paste(substr(tweets$created,27,31),
+                         substr(tweets$created, 5, 19)) %>%
+    ymd_hms() %>%
+    as.POSIXct()
+
+tweets$is_retweet <- ifelse(grepl('*RT', tweets$text), TRUE, FALSE)
+
+
+```
