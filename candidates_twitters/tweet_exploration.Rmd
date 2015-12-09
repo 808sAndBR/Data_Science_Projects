@@ -12,7 +12,7 @@ library(lubridate)
 
 ```{r}
 # Read in tweets produced by twitter_scraper.py
-tweets <- read.csv('canidate_tweets.csv')
+tweets <- read.csv('canidate_tweets.csv', stringsAsFactors = FALSE)
 
 tweets$datetime <- paste(substr(tweets$created,27,31),
                          substr(tweets$created, 5, 19)) %>%
@@ -21,5 +21,30 @@ tweets$datetime <- paste(substr(tweets$created,27,31),
 
 tweets$is_retweet <- ifelse(grepl('*RT', tweets$text), TRUE, FALSE)
 
+tweets$text <- gsub('\\\n',' ', tweets$text)
 
+tweets$links <- strsplit(tolower(tweets$text), " ") %>%
+    lapply(grep, pattern= 'http', value = TRUE)
+
+
+tweets$split <- strsplit(tolower(tweets$text), " ")
+
+
+
+extractor <- function(string, includes = TRUE){
+    split_tweet = tolower(tweets$text)
+    if(includes){
+        occurences = split_tweet[!grepl(string, split_tweet)]
+    } else {  
+        occurences = grep(string, split_tweet, value = TRUE)
+    }
+    occurences
+}
+
+unlist(strsplit(tolower(tweets$text[10]), " "))[!grepl("http", unlist(strsplit(tolower(tweets$text[10]), " ")))]
+
+?grep
+?str_split
+class(tweets$text[10])
+?strsplit
 ```
