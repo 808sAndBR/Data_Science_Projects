@@ -14,6 +14,7 @@ library(lubridate)
 # Read in tweets produced by twitter_scraper.py
 tweets <- read.csv('canidate_tweets.csv', stringsAsFactors = FALSE)
 
+# convert Twitters API format to one we can work with
 tweets$datetime <- paste(substr(tweets$created,27,31),
                          substr(tweets$created, 5, 19)) %>%
     ymd_hms() %>%
@@ -21,28 +22,54 @@ tweets$datetime <- paste(substr(tweets$created,27,31),
 
 tweets$is_retweet <- ifelse(grepl('*RT', tweets$text), TRUE, FALSE)
 
+# retain raw version in case its useful later
 tweets$rawtext <- tweets$text
-tweets$text <- tweets$rawtext
 
 tweets$text <- gsub('\\\n',' ', tweets$text)
 
+# Grab all links before removing punctuation charicters
 tweets$links <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= 'http', value = TRUE)
 
+# Remove puntuation that isn't part of words
 tweets$text <- gsub('[\\.\\\",!?:]', '', tweets$text)
 
 tweets$hashtags <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= '#', value = TRUE)
 
+tweets$hashtags[tweets$hashtags == 'character(0)'] <- NA
+
 tweets$mentions <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= '@', value = TRUE)
 
+# Split all the words out to work with, but ignore things that are in their own column
 tweets$split <- strsplit(tolower(tweets$text), " ") %>%
-    lapply(grep, pattern= 'http|@|#|rt', value = TRUE, invert=TRUE)
-
-
-View(head(tweets,400))
-
-
+    lapply(grep, pattern= 'http|@|#|^(rt)$', value = TRUE, invert=TRUE)
 
 ```
+
+```{r}
+blobs <- group_by(subset(tweets, tweets$is_retweet==FALSE), canidate) %>%
+    summarise(count = n(), 
+              hashtags = paste(unlist(hashtags), collapse = ","),
+              words = strsplit(paste(unlist(split), collapse = ","), ","),
+              mentions = paste(unlist(mentions), collapse = ","),
+              retweets = sum(retweets),
+              likes = sum(likes)
+              )
+
+?summarise
+length(blobs$words[1])
+
+
+
+sort(table(strsplit(blobs$words, ",")))
+?strsplit
+Filter(function(x) !identical(character(0),x), blobs$hashtags[1])
+View(head(blobs))
+names(tweets)
+?n
+
+```
+
+
