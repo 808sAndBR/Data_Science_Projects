@@ -21,30 +21,28 @@ tweets$datetime <- paste(substr(tweets$created,27,31),
 
 tweets$is_retweet <- ifelse(grepl('*RT', tweets$text), TRUE, FALSE)
 
+tweets$rawtext <- tweets$text
+tweets$text <- tweets$rawtext
+
 tweets$text <- gsub('\\\n',' ', tweets$text)
 
 tweets$links <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= 'http', value = TRUE)
 
+tweets$text <- gsub('[\\.\\\",!?:]', '', tweets$text)
 
-tweets$split <- strsplit(tolower(tweets$text), " ")
+tweets$hashtags <- strsplit(tolower(tweets$text), " ") %>%
+    lapply(grep, pattern= '#', value = TRUE)
+
+tweets$mentions <- strsplit(tolower(tweets$text), " ") %>%
+    lapply(grep, pattern= '@', value = TRUE)
+
+tweets$split <- strsplit(tolower(tweets$text), " ") %>%
+    lapply(grep, pattern= 'http|@|#|rt', value = TRUE, invert=TRUE)
+
+
+View(head(tweets,400))
 
 
 
-extractor <- function(string, includes = TRUE){
-    split_tweet = tolower(tweets$text)
-    if(includes){
-        occurences = split_tweet[!grepl(string, split_tweet)]
-    } else {  
-        occurences = grep(string, split_tweet, value = TRUE)
-    }
-    occurences
-}
-
-unlist(strsplit(tolower(tweets$text[10]), " "))[!grepl("http", unlist(strsplit(tolower(tweets$text[10]), " ")))]
-
-?grep
-?str_split
-class(tweets$text[10])
-?strsplit
 ```
