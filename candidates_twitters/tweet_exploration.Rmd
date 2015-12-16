@@ -43,6 +43,7 @@ tweets$mentions <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= '@', value = TRUE)
 
 # Split all the words out to work with, but ignore things that are in their own column
+# should add quotation mark
 tweets$split <- strsplit(tolower(tweets$text), " ") %>%
     lapply(grep, pattern= 'http|@|#|^(rt)$', value = TRUE, invert=TRUE)
 
@@ -58,17 +59,21 @@ blobs <- group_by(subset(tweets, tweets$is_retweet==FALSE), canidate) %>%
               likes = sum(likes)
               )
 
-?summarise
-length(blobs$words[1])
+
+blobs$word_counts <- lapply(blobs$words, table) %>%
+    lapply(sort, decreasing = TRUE)
+
+
+blobs$word_counts[[1]]['weak']
 
 
 
-sort(table(strsplit(blobs$words, ",")))
+sort(table(strsplit(blobs$words[1], ",")))
 ?strsplit
 Filter(function(x) !identical(character(0),x), blobs$hashtags[1])
 View(head(blobs))
 names(tweets)
-?n
+
 
 ```
 
