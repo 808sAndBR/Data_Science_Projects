@@ -1,0 +1,192 @@
+---
+title: "Survey"
+author: "Scott Brenstuhl"
+date: "February 23, 2016"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(reshape2)
+library(plotly)
+```
+
+
+
+```{r, echo=FALSE}
+# Originally from SF Open Data
+# https://data.sfgov.org/City-Management-and-Ethics/San-Francisco-City-Survey-Data-1996-2015/89tc-4uwi
+
+# setwd('/Users/scottbrenstuhl/Projects/Data_Science_Projects/SF_city_survey')
+
+city.survey <- read_csv('data/San_Francisco_City_Survey_Data_1996-2015.csv')
+#unique(city.survey$finweigh)
+
+```
+
+Ideas:
+    Things by zipcode over time
+    Parents vs not
+    % of respondents with kids over the years (maybe also by zip)
+    Peoples own neighborhoods vs city wide (by zip too)
+    Correlation between cleanliness, lights, etc. and safety
+    Match up Zipcode info with census data see how incomes etc. play in
+    Tell the story of the mission & SOMA since people talk about them changing so much
+        Mission zipcode: 94110
+        SOMA: 94103
+    Do changes over the years match up with 311 call learnings?
+    All kinds of demographics info. 
+        Does it line up with Census data?
+        People per household, up or down?
+        Own or rent home
+    What do people say in open ended comments? 
+        
+Questions:
+    How do I do the weighting for finweigh
+    Neighborhoods mapped to zips?
+    
+    
+regression table
+Arima, forcast package
+
+6 and 7 should probably be made NA
+```{r, echo=FALSE}
+sidewalks <- group_by(city.survey, swclnbrd, swclcity) %>% 
+            summarise(count = n())
+
+ggplot(sidewalks, aes(swclnbrd, swclcity)) +
+    geom_point(aes(size=count)) +
+    labs(title = 'Cleanliness of Sidewalks',
+         x = 'Own Neghborhood', y = 'The City')
+
+sidewalks.sub <- subset(city.survey, zipcode %in% c(94110, 94103)) %>%
+    group_by(swclnbrd, swclcity) %>%
+    summarise(count = n())
+
+# lol this seems useless
+ggplot(sidewalks.sub, aes(swclnbrd, swclcity)) +
+    geom_point(aes(size=count)) +
+    labs(title = 'Cleanliness of Sidewalks (Mission &SOMA residents)',
+         x = 'Own Neghborhood', y = 'The City')
+
+```
+
+This needs to be a lot more digestable to be useful
+2015, zip = NA remove after finding out why
+```{r, echo=FALSE}
+sidewalks_year <- group_by(city.survey, year, zipcode) %>% 
+            summarise(mean_rating = mean(swclnbrd, na.rm= TRUE), count = n())
+sidewalks_year <- subset(sidewalks_year, year > 2003)
+
+ggplot(sidewalks_year, aes(year, mean_rating, color = zipcode))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Sidewalk cleanliness over time by neighborhood',
+          x= 'Year', y = 'Mean Rating of Own Neighborhood')
+
+sidewalks_year <- subset(sidewalks_year, year > 2003 & zipcode %in% c(94110, 94103))
+
+ggplot(sidewalks_year, aes(year, mean_rating, color = zipcode))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Sidewalk cleanliness over time by neighborhood',
+          x= 'Year', y = 'Mean Rating of Own Neighborhood')
+
+
+```
+
+
+Lolllllllll Need a lot of zip cleaning and a better plan than facets
+```{r, echo=FALSE}
+# sidewalks_zips <- group_by(city.survey, swclnbrd, swclcity, zipcode) %>% 
+#             summarise(count = n())
+# 
+# ggplot(sidewalks, aes(swclnbrd, swclcity)) +
+#     facet_grid(zipcode ~ .) +
+#     geom_point(aes(size=count)) +
+#     labs(title = 'Cleanliness of Sidewalks',
+#          x = 'Own Neghborhood', y = 'The City')
+
+```
+
+
+```{r, echo=FALSE}
+parents.by.year <- group_by(city.survey, year, kids) %>%
+    summarise(count = n()) %>%
+    group_by(year) %>%
+    mutate(year_count = sum(count)) %>%
+    group_by(kids) %>%
+    mutate(percent = (count/year_count)*100)
+
+plot.parents <- subset(parents.by.year, kids == 1)
+ggplot(plot.parents, aes(year, percent)) +
+    geom_point() +
+    geom_line() +
+    labs(title = "% of respondents with children")
+
+```
+
+```{r, echo=FALSE}
+parents.by.year.zip <- group_by(city.survey, year, kids, zipcode) %>%
+    summarise(count = n()) %>%
+    group_by(year, zipcode) %>%
+    mutate(year_count = sum(count))%>%
+    group_by(kids) %>%
+    mutate(percent = (count/year_count)*100)
+
+#plot.parents.zip <- subset(parents.by.year.zip, kids == 1 & zipcode %in% c(94110, 94103))
+plot.parents.zip <- subset(parents.by.year.zip, kids == 1)
+p <- ggplot(plot.parents.zip, aes(year, percent, color=zipcode)) +
+    geom_point() +
+    geom_line() +
+    labs(title = "% of respondents with children by zip")
+
+ggplotly(p)
+
+plot.parents.zip <- subset(parents.by.year.zip, kids == 1 & zipcode %in% c(94110, 94103))
+#plot.parents.zip <- subset(parents.by.year.zip, kids == 1)
+p <- ggplot(plot.parents.zip, aes(year, percent, color=zipcode)) +
+    geom_point() +
+    geom_line() +
+    labs(title = "% of respondents with children by zip")
+
+ggplotly(p)   
+```
+
+The groupings in this changes so need to account for that.
+```{r echo = FALSE}
+#how long in sf
+length.of.residence <- group_by(city.survey, dlivedsf, year) %>%
+    summarize(count = n()) %>%
+    group_by(year) %>%
+    mutate(year_count = sum(count)) %>%
+    group_by(dlivedsf) %>%
+    mutate(percent = (count/year_count)*100, dlivedsf2= as.character(dlivedsf))
+# make dlivedsf a factor of charicter 
+
+ggplot(length.of.residence, aes(year, percent, color=dlivedsf2)) +
+    geom_point() +
+    geom_line() +
+    labs(title = '% of people lived in SF for x years')
+```
+
+```{r echo=FALSE}
+#How likely to move from sf in next 3 years
+leaving <- group_by(city.survey, movesf, year) %>%
+    summarize(count = n()) %>%
+    group_by(year) %>%
+    mutate(year_count = sum(count)) %>%
+    group_by(movesf) %>%
+    mutate(percent = (count/year_count)*100, movesf2 = as.character(movesf))%>%
+    subset(year >= 2005)
+
+ggplot(leaving, aes(year,percent, color = movesf2)) +
+    geom_point() +
+    geom_line()+
+    labs(title = 'Likelyhood to move out of SF')
+    
+
+```
+

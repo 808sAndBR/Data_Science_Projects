@@ -62,10 +62,48 @@ blobs <- group_by(subset(tweets, tweets$is_retweet==FALSE), canidate) %>%
 
 blobs$word_counts <- lapply(blobs$words, table) %>%
     lapply(sort, decreasing = TRUE)
+```
+```{r}
+for(i in 1:nrow(blobs)){
+    print(c(blobs$canidate[i], round(length(blobs$word_counts[[i]])/sum(blobs$word_counts[[i]]),4)*100))
+}
 
 
-blobs$word_counts[[1]]['weak']
+for(i in 1:nrow(blobs)){
+    print(c(blobs$canidate[i], 
+            blobs$word_counts[[i]]['obama'], 
+            blobs$word_counts[[i]]['president']))
+}
 
+# Bernie lololol
+for(i in 1:nrow(blobs)){
+    print(c(blobs$canidate[i], 
+            blobs$word_counts[[i]]['class']))
+}
+
+#how is this not higher
+for(i in 1:nrow(blobs)){
+    print(c(blobs$canidate[i], 
+            blobs$word_counts[[i]]['gun'],
+            blobs$word_counts[[i]]['guns'],
+            blobs$word_counts[[i]]['second'],
+            blobs$word_counts[[i]]['amendment']
+            ))
+}
+
+
+for(i in 1:nrow(blobs)){
+    print(c(blobs$canidate[i], 
+            blobs$word_counts[[i]]['me'],
+            blobs$word_counts[[i]]['i'],
+            blobs$word_counts[[i]]['we']))
+}
+
+length(blobs$word_counts)
+
+
+blobs$word_counts[[2]][1:50]
+length(blobs$word_counts[[1]])
 
 
 sort(table(strsplit(blobs$words[1], ",")))

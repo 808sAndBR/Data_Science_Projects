@@ -1,3 +1,4 @@
-*.pyc
-*config.py
-*venv*
+**.pyc
+**config.py
+**venv**
+**_site
