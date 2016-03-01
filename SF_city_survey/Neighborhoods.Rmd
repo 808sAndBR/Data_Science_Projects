@@ -1,0 +1,314 @@
+---
+title: "Neighborhoods"
+author: "Scott Brenstuhl"
+date: "February 28, 2016"
+output: html_document
+---
+
+```{r echo = FALSE}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(reshape2)
+library(plotly)
+```
+
+```{r, echo=FALSE}
+# Processing the data
+
+city.survey <- read_csv('data/San_Francisco_City_Survey_Data_1996-2015.csv')
+zip2hood <- read_csv("data/zipcode_to_neighborhood.csv")
+
+# 2015 doesn't have zipcodes and they changed the survey method so deleting
+survey <- subset(city.survey, year < 2015)
+
+# Also removing rows without finweigh since can't be appropriately weighted
+survey <- filter(survey, !is.na(survey$finweigh))
+
+# Various zipcodes don't match any neighborhood combining with NAs
+survey$zipcode[!((survey$zipcode) %in% zip2hood$zipcode)] <- 'misc'
+
+# Add neighborhoods
+zip2hood <- rbind(zip2hood, c('misc', 'misc'))
+survey <- merge(survey, zip2hood, by = 'zipcode')
+
+survey$focus.areas[survey['zipcode'] == '94102'] <- 'SOMA/Hayes Valley/Tenderloin'
+survey$focus.areas[survey['zipcode'] == '94103'] <- 'SOMA/Hayes Valley/Tenderloin'
+survey$focus.areas[survey['zipcode'] == '94110'] <- 'Mission'
+survey$focus.areas[is.na(survey$focus.areas)] <- 'Rest of SF'
+
+# Get variables set to correct class
+survey$swclcity <- sapply(survey$swclcity, as.numeric)
+survey$treesnbr <- sapply(survey$treesnbr, as.numeric)
+survey$treescit <- sapply(survey$treescit, as.numeric)
+survey$munfar <- sapply(survey$munfar, as.numeric)
+survey$munrid <- sapply(survey$munrid, as.numeric)
+
+survey$munrid <- sapply(survey$munrid, as.numeric)
+```
+
+Is 2009 unreliable?
+
+```{r, echo=FALSE}
+own.sidewalks <- filter(survey, year > 2003 & swclnbrd < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(swclnbrd, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(own.sidewalks, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Sidewalk Cleanliness of Own Neghborhood',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+city.sidewalks <- filter(survey, year > 2003 & swclcity < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(swclcity, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(city.sidewalks, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Sidewalk Cleanliness of City',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+own.trees <- filter(survey, year > 2004 & year < 2010 & treesnbr < 4) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(treesnbr, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(own.trees, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Trees in your Neighborhood',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+city.trees <- filter(survey, year > 2004 & year < 2010 & treescit < 4) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(treescit, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(city.trees, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Trees in the City',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+
+```{r, echo=FALSE}
+muni.time <- filter(survey, muntim < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(muntim, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(muni.time, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Timeliness/Reliability of Muni',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+muni.clean <- filter(survey, muncle < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(muncle, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(muni.clean, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Clanliness of Muni',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+muni.fares <- filter(survey, munfar < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(munfar, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(muni.fares, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Muni Fares',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+muni.safety <- filter(survey, munsaf < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(munsaf, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(muni.safety, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Safety of Muni',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+muni.frequency <- filter(survey, munrid < 7) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(munrid, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(muni.frequency, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Frequency Riding Muni',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+
+```{r, echo=FALSE}
+
+day.safety <- filter(survey, safdnb < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(safdnb, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(day.safety, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Safety in your Neghborhood Alone Day',
+          x= 'Year', y = 'Mean Rating')
+```
+
+```{r, echo=FALSE}
+
+night.safety <- filter(survey, safnnb < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(safnnb, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(night.safety, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Safety in your Neghborhood Alone Night',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+```{r, echo=FALSE}
+
+highest.edu <- filter(survey, deduc < 5) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(deduc, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(highest.edu, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Highest Level of Education',
+          x= 'Year', y = 'Mean Rating')
+
+
+```
+
+
+```{r, echo=FALSE}
+
+move.likely <- filter(survey, movesf < 5) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(movesf, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(move.likely, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Likelyhood to Leave SF in Next 3 Years',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+
+```{r, echo=FALSE}
+
+city.services <- filter(survey, general < 6) %>%
+            group_by(year, focus.areas) %>% 
+            summarise(
+                mean_rating = weighted.mean(general, finweigh, na.rm= TRUE), 
+                count = n()
+            )
+
+ggplot(city.services, aes(year, mean_rating, color = focus.areas))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'General City Services Rating',
+          x= 'Year', y = 'Mean Rating')
+
+```
+
+
+
+
+```{r, echo=FALSE}
+# Returns weighted mean
+# grade_summary <- function(column){
+#       data.frame(group_by_(survey, column, ~year))%>%
+#            summarize_(
+#                vg = ~weighted.mean(column[[2]], ~finweigh, na.rm= TRUE)
+#                #avg = ~mean(column[[2]], na.rm =TRUE)
+#                freq = ~n()*column[[2]]
+#                )
+# }
+
+# 
+# grade_summary(~swclnbrd)
+# 
+# 
+# 
+# group_by(survey, swclnbrd) %>%
+#     summarise(mean(swclnbrd))
+# survey$swclnbrd
+# 
+# 
+# head(survey['swclnbrd',])
+# class(survey$swclnbrd*2)
+
+
+```
+

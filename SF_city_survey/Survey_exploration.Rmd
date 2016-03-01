@@ -22,8 +22,16 @@ library(plotly)
 # setwd('/Users/scottbrenstuhl/Projects/Data_Science_Projects/SF_city_survey')
 
 city.survey <- read_csv('data/San_Francisco_City_Survey_Data_1996-2015.csv')
+zip2hood <- read_csv("data/zipcode_to_neighborhood.csv")
+fizz <- subset(city.survey, year < 2015)
+table(fizz$zipcode[!((fizz$zipcode) %in% zip2hood$Zipcode)],useNA = "always")
 #unique(city.survey$finweigh)
+table(city.survey$zipcode, useNA = "always")
 
+group_by(city.survey, zipcode, year) %>%
+    summarize(n())
+    
+class(city.survey$year)
 ```
 
 Ideas:
@@ -41,18 +49,25 @@ Ideas:
         Does it line up with Census data?
         People per household, up or down?
         Own or rent home
-    What do people say in open ended comments? 
+    What do people say in open ended comments?
+    Transit exploration
         
 Questions:
     How do I do the weighting for finweigh
     Neighborhoods mapped to zips?
-    
+    In 2015 they switched to using districts intead of zipcodes... whyyyyyy
+
+Page 133 -135 have a lot of methodology info
     
 regression table
 Arima, forcast package
 
 6 and 7 should probably be made NA
 ```{r, echo=FALSE}
+city.survey$swclcity <- sapply(city.survey$swclcity, as.numeric)
+
+cor(subset(city.survey, swclcity < 6 & swclnbrd < 6, select = c(swclcity, swclnbrd)), use ="complete.obs")
+
 sidewalks <- group_by(city.survey, swclnbrd, swclcity) %>% 
             summarise(count = n())
 
@@ -61,7 +76,7 @@ ggplot(sidewalks, aes(swclnbrd, swclcity)) +
     labs(title = 'Cleanliness of Sidewalks',
          x = 'Own Neghborhood', y = 'The City')
 
-sidewalks.sub <- subset(city.survey, zipcode %in% c(94110, 94103)) %>%
+sidewalks.sub <- subset(city.survey, zipcode %in% c(94110, 94103,94102)) %>%
     group_by(swclnbrd, swclcity) %>%
     summarise(count = n())
 
@@ -86,7 +101,7 @@ ggplot(sidewalks_year, aes(year, mean_rating, color = zipcode))+
     labs( title = 'Sidewalk cleanliness over time by neighborhood',
           x= 'Year', y = 'Mean Rating of Own Neighborhood')
 
-sidewalks_year <- subset(sidewalks_year, year > 2003 & zipcode %in% c(94110, 94103))
+sidewalks_year <- subset(sidewalks_year, year > 2003 & zipcode %in% c(94110, 94103, 94102))
 
 ggplot(sidewalks_year, aes(year, mean_rating, color = zipcode))+
     geom_point() +
@@ -94,6 +109,15 @@ ggplot(sidewalks_year, aes(year, mean_rating, color = zipcode))+
     labs( title = 'Sidewalk cleanliness over time by neighborhood',
           x= 'Year', y = 'Mean Rating of Own Neighborhood')
 
+sidewalks_year_w <- group_by(city.survey, year, zipcode) %>% 
+            summarise(mean_rating = weighted.mean(swclnbrd,finweigh, na.rm= TRUE), count = n())
+sidewalks_year_w <- subset(sidewalks_year_w, year > 2003 & zipcode %in% c(94110, 94103, 94102))
+
+ggplot(sidewalks_year_w, aes(year, mean_rating, color = zipcode))+
+    geom_point() +
+    geom_line() +
+    labs( title = 'Sidewalk cleanliness over time by neighborhood',
+          x= 'Year', y = 'Mean Rating of Own Neighborhood')
 
 ```
 
@@ -145,7 +169,7 @@ p <- ggplot(plot.parents.zip, aes(year, percent, color=zipcode)) +
 
 ggplotly(p)
 
-plot.parents.zip <- subset(parents.by.year.zip, kids == 1 & zipcode %in% c(94110, 94103))
+plot.parents.zip <- subset(parents.by.year.zip, kids == 1 & zipcode %in% c(94110, 94103, 94102))
 #plot.parents.zip <- subset(parents.by.year.zip, kids == 1)
 p <- ggplot(plot.parents.zip, aes(year, percent, color=zipcode)) +
     geom_point() +
@@ -157,6 +181,13 @@ ggplotly(p)
 
 The groupings in this changes so need to account for that.
 ```{r echo = FALSE}
+# Row 155 of data dictionary
+# Options changed in 2011 and 2013's were unique
+# I dont think the data dictionary is right about the questions. They
+# seem to be mixed up.
+
+city.survey[]
+
 #how long in sf
 length.of.residence <- group_by(city.survey, dlivedsf, year) %>%
     summarize(count = n()) %>%
@@ -190,3 +221,35 @@ ggplot(leaving, aes(year,percent, color = movesf2)) +
 
 ```
 
+```{r echo=FALSE}
+city.survey$muncon <- sapply(city.survey$muncon, as.numeric)
+
+#muncon_year <- group_by(city.survey, year, zipcode) %>% 
+
+muncon_year <- group_by(city.survey, year, zipcode) %>% 
+            summarise(mean_rating = mean(muncon, na.rm= TRUE), count = n())
+
+muncon_year_w <- subset(city.survey, (!is.na(finweigh)) ) %>%
+            group_by(year) %>% 
+            summarise(mean_rating = weighted.mean(muncon, finweigh, na.rm= TRUE), count = n())
+
+#sidewalks_year <- subset(sidewalks_year, year > 2003)
+
+ggplot(muncon_year, aes(year, mean_rating, color = zipcode))+
+    geom_point() +
+    geom_line() 
+# +
+#     labs( title = 'Sidewalk cleanliness over time by neighborhood',
+#           x= 'Year', y = 'Mean Rating of Own Neighborhood')
+```
+
+```{r echo=FALSE}
+zip2hood <- read_csv("data/zipcode_to_neighborhood.csv")
+
+table(city.survey$zipcode[!((city.survey$zipcode) %in% zip2hood$Zipcode)])
+
+View(subset(city.survey, zipcode %in% c(94110, 94103, 94102)) %>%
+    group_by(zipcode,year) %>%
+    summarize(n()))
+
+```
